@@ -68,21 +68,42 @@ abstract class CometApiBase extends ApiBase {
 
 	# spool a file from a given position
 	public function spoolFile( $path, $from=0 ) {
-		global $wgCometPeriod;
-		while ( 1 ) {
+		global $wgCometPeriod, $wgCometTimeout, $wgCometMaxDumpSize;
+		global $wgCometKeepAliveInterval;
+		$startTime = $currentTime = $lastEventTime = time();
+		# limit the amount of file contents we're about to throw at
+		# the client, to avoid congestion and overload
+		if ( $from == 0 ) {
+			$fileSize = filesize( $path );
+			if ( $fileSize !== false and $fileSize > $wgCometMaxDumpSize ) {
+				$from = $fileSize - $wgCometMaxDumpSize;
+			}
+			#error_log( getmypid() . " filesize: $fileSize" );
+		}
+		# run for 5 minutes wall-clock time and then quit.
+		# we could probably run longer, but we don't want to be
+		# burdened with runaway server processes in case of bugs,
+		# and it's cheap to reconnect when we're just spooling 
+		# a file.
+		while ( $currentTime - $startTime < $wgCometTimeout ) {
 			if ( ! file_exists( $path ) ) {
 				throw new CometFileNotFoundException;
 			}
 			@$data = file_get_contents( $path, false, null, $from, 8192 );
 			if ( strlen( $data ) > 0 ) {
 				$to = $from + strlen($data);
-				$this->sendEvent( "$from; $to; $data", 'update' );
+				$this->sendEvent( "$from; $to; $data", 'update', $to );
+				error_log( getmypid() . " scroll $from -- $to" );
 				$from = $to;
-				error_log( getmypid() . " scroll" );
-			}
+			 }
 			# connection_aborted() will either return false or not return
 			if ( ! connection_aborted() and strlen($data) < 8192 ) {
 				usleep( $wgCometPeriod );
+			}
+			$currentTime = time();
+			if ( $currentTime - $lastEventTime >= $wgCometKeepAliveInterval ) {
+				$this->sendEvent( '', 'keep-alive' );
+				$lastEventTime = $currentTime;
 			}
 		}
 	}

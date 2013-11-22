@@ -22,8 +22,15 @@
 
 class CometDemoApi extends CometApiBase {
 	public function execute() {
-		$this->setupOutput();
 		global $wgDebugLogFile;
+		$params = $this->extractRequestParams();
+		$from = $params['from'];
+
+		$this->setupOutput();
+		// where is the Last-Event-ID header?
+		// error_log( 'Last-Event-ID: ' . $_SERVER['Last-Event-ID'] );
+		//error_log( 'Last_Event_ID: ' . $_SERVER['HTTP_LAST_EVENT_ID'] );
+		//error_log( 'keys: ' . json_encode( array_keys($_SERVER) ) );
 		if ( $wgDebugLogFile == '' ) {
 			$this->sendEvent( 
 				wfMessage( 'cometdemo-no-logfile' )->escaped(), 
@@ -31,7 +38,7 @@ class CometDemoApi extends CometApiBase {
 			);
 		} else {
 			try {
-				$this->spoolFile( $wgDebugLogFile );
+				$this->spoolFile( $wgDebugLogFile, $from );
 			} catch ( CometFileNotFoundException $ex ) {
 				$this->sendEvent(
 					wfMessage( 'cometdemo-logfile-not-found',
@@ -42,4 +49,29 @@ class CometDemoApi extends CometApiBase {
 		}
 		$this->finishOutput();
 	}
-};
+
+	public function getAllowedParams() {
+		return array(
+			'from' => array(
+					ApiBase::PARAM_TYPE => 'integer',
+					#ApiBase::PARAM_REQUIRED => false
+			),
+		);
+	}
+
+	public function getParamDescription() {
+		return array(
+			'from' => 'Starting byte index',
+		);
+	}
+
+	public function getDescription() {
+		return 'Use Server-Sent Events to spool the contents of the wiki\'s debug logfile';
+	}
+
+	public function getVersion() {
+		return __CLASS__ . ': (version unknown.	By Lee Worden.)';
+	}
+}
+
+?>

@@ -28,10 +28,11 @@ $messages['en'] = array(
 	'cometdemo-opening' => 'Connecting to wiki...',
 	'cometdemo-could-not-connect' => 'Could not connect to CometDemo API service',
 	'cometdemo-no-logfile' => "CometDemo cannot display the contents of "
-		. "the wiki's debug log, because the wiki does not have its "
+		. "the wikiʼs debug log, because the wiki does not have its "
 		. "debug log enabled.  If you are the website administrator, "
 		. "consider setting \$wgDebugLogFile, to enable this feature "
 		. "for long enough to try this demo.",
+	'cometdemo-notification-top' => "Click to dismiss.",
 	'cometdemo-logfile-not-found' => "File $1 not found",
 	'cometdemo-error' => 'Error: $1',
 );

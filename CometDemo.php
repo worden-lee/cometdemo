@@ -20,7 +20,7 @@
  * http://www.gnu.org/copyleft/gpl.html
  */
 
-// extension info for the Special:Version page
+// Extension info for the Special:Version page
 $wgExtensionCredits['cometdemo'][] = array(
 	'path' => __FILE__,
 	'name' => 'Comet/Server-Sent Events Demo Extension',
@@ -30,25 +30,43 @@ $wgExtensionCredits['cometdemo'][] = array(
 	'url' => '', # fill in github url?
 );
 
-// Set period in microseconds between updates
+// Period in microseconds between updates
 // I'm setting it short for a smooth demo - for serious applications
 // it should be longer, to give the server a break
 $wgCometPeriod = 250000;
 
-// Associate api.php?action=comet-demo with a class name to call
+// Time in seconds that the Comet service runs before quitting
+// The client can reconnect if it wants to - this protects against
+// runaway processes on the server.
+$wgCometTimeout = 20;
+
+// Interval in milliseconds before client should try to reconnect
+// Note we don't use the EventSource's retry feature, we do it ourself
+$wgCometClientRetryInterval = 3000;
+
+// Interval in seconds before server sends a null message to relieve
+// the client of having to reconnect
+$wgCometKeepAliveInterval = 2;
+
+// Maximum number of bytes to dump when the Comet spoolFile() function
+// starts - don't overload the network and client with a huge data dump.
+// Instead just give the last part of the file.
+$wgCometMaxDumpSize = 81920;
+
+// Class name to use for api.php?action=comet-demo
 $wgAPIModules['comet-demo'] = 'CometDemoApi';
 
-// Associate class name with the file where it's defined
+// Files where classes are defined
 $wgAutoloadClasses['CometApiBase'] // A reusable class
 	= dirname(__FILE__).'/CometApi.php';
 $wgAutoloadClasses['CometDemoApi'] // And a demo of what it can do
 	= dirname(__FILE__).'/CometDemoApi.php';
 
-// Declare file where the demo's messages are defined in the user's language
+// File where the demo's messages are defined in the user's language
 $wgExtensionMessagesFiles['cometdemo'] 
 	= dirname(__FILE__).'/CometDemo.i18n.php';
 
-// Declare resources (JavaScript, CSS) to be included in the output page
+// Resources to be delivered with the output page
 $wgResourceModules['ext.cometdemo'] = array(
 	'localBasePath' => dirname( __FILE__ ) . '/resources',
 	'scripts' => 'ext.cometdemo.js',
@@ -56,6 +74,7 @@ $wgResourceModules['ext.cometdemo'] = array(
 		'cometdemo-opening',
 		'cometdemo-error',
 		'cometdemo-could-not-connect',
+		'cometdemo-notification-top',
 	),
 	'dependencies' => array(
 		'mediawiki.notify',
@@ -64,7 +83,11 @@ $wgResourceModules['ext.cometdemo'] = array(
 
 // Make sure the resources get added to the output page
 function wfCometDemoBeforePageDisplay( OutputPage &$out, Skin &$skin ) {
+	global $wgCometClientRetryInterval;
 	$out->addModules( array( 'ext.cometdemo' ) );
+	$out->addJsConfigVars( array( 
+		'cometRetryInterval' => $wgCometClientRetryInterval,
+	) );
 	return true;
 }
 $wgHooks['BeforePageDisplay'][] = 'wfCometDemoBeforePageDisplay';
@@ -77,8 +100,9 @@ function wfCometDemoSkinTemplateNavigation( SkinTemplate &$skt, array &$links ) 
 		'text' => wfMessage( 'cometdemo-tab-name' )->escaped(),
 		'href' => '#'
 	);
+	return true;
 }
-$wgHooks['SkinTemplateNavigation'][] = 'wfCometDemoSkinTemplateNavigation';
+$wgHooks['SkinTemplateNavigation::Universal'][] = 'wfCometDemoSkinTemplateNavigation';
 
 // Reassure the upstream code that nothing's wrong
 return true;
