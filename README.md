@@ -8,6 +8,6 @@ client interface to display the streaming information.
 
 When this extension is installed, wiki pages will gain a "View debug log"
 action tab, which opens a notification bubble where the contents of the 
-wiki's debug logfile are displayed in near realtime.
+wiki's debug logfile are displayed and kept updated.
 
 Working in MW 1.21+ as of 11/2013.
